@@ -2,6 +2,7 @@ CREATE OR REPLACE FUNCTION public.uf_comprobantee_paciente_boleta(an_crcmprbnte 
  RETURNS text
  LANGUAGE plpgsql
 AS $function$
+
 DECLARE totalPago pwccj06.mpgdo%TYPE;
 DECLARE vuelto pwccj06.vlto%TYPE;
 DECLARE usuario pwccj06.cucrgstro%TYPE;
@@ -27,9 +28,9 @@ RUTA_SERVIDOR_IMPRESION := 'clinicasantaisabel.com:aceptauser:C$Iacepta:\\SIF2.c
 
 /*QUERY PARA OBTENER VUELTO Y TOTAL DE CPE*/
 SELECT SUM(pwccj06.mpgdo) AS mpsls,
-   	       SUM(pwccj06.vlto) AS vlto,
-	       max(ccja) AS caja,
-   	      max(cucrgstro) AS usuario
+   	        SUM(pwccj06.vlto) AS vlto,
+	        MAX(ccja) AS caja,
+   	        MAX(cucrgstro) AS usuario
 INTO totalPago, vuelto,caja,usuario
 FROM pwccj06
 WHERE crcmprbnte = an_crcmprbnte;
@@ -51,23 +52,23 @@ FROM impresora;
 
 
 /*QUERY PARA OBTENER LOS MEDIOS DE PAGOS DEL CPE*/
-	SELECT string_agg(
+	SELECT STRING_AGG(
 		CASE 
 		WHEN a.cmnda = 1 THEN
 			CASE 
 			WHEN a.tfpgo = 'EF' THEN 'Efectivo' 
 			WHEN a.tfpgo = 'TJ' THEN 
 				CASE
-				WHEN a.ttrjta = 'D' THEN  'T.Deb. '||b.drsmda||' '||lpad(a.ntrjta,10,'*')
-				WHEN a.ttrjta = 'C' THEN  'T.Cre. '||b.drsmda||' '||lpad(a.ntrjta,10,'*')
+				WHEN a.ttrjta = 'D' THEN  'T.Deb. '||b.drsmda||' '||LPAD(a.ntrjta,10,'*')
+				WHEN a.ttrjta = 'C' THEN  'T.Cre. '||b.drsmda||' '||LPAD(a.ntrjta,10,'*')
 				END
 			WHEN a.tfpgo = 'NC' THEN 'N/C'||' Nº'||
 				CASE WHEN a.crcmprbntencrdto IS NULL THEN '' ELSE fpwtgnd01(a.crcmprbntencrdto,False) END
 			END 
 		WHEN a.cmnda = 2 THEN	
-			'Dólares USD ' || trunc(a.mpdlrs,2)
+			'Dólares USD ' || TRUNC(a.mpdlrs,2)
 		END ||'|'||
-		cast(a.mpgdo as varchar)||'}', '' order by a.nitm) as pagos_realizados ,max(a.nprfctra)
+		a.mpgdo::TEXT||'}', '' order by a.nitm) as pagos_realizados ,MAX(a.nprfctra)
 	FROM pwccj06 a
 	INTO mediosDePagos,prefactura
 	LEFT JOIN pwctv37 b ON(a.cmtrjta = b.cmtrjta)
@@ -82,15 +83,15 @@ WHERE nprfctra = prefactura;
 	 
 WITH cpeCabecera AS (
 SELECT 
-		concat_ws('|',
-			'docid='||a.tcmprbnte||lpad(a.nscmprbnte::TEXT,3,'0')||'-'||lpad(a.ncmprbnte::TEXT,8,'0')||'&comando='||COMANDO||'&parametros=&datos='||
+		CONCAT_WS('|',
+			'docid='||a.tcmprbnte||LPAD(a.nscmprbnte::TEXT,3,'0')||'-'||LPAD(a.ncmprbnte::TEXT,8,'0')||'&comando='||COMANDO||'&parametros=&datos='||
 			'03'/*AS tipoDocumento*/,
-			a.tcmprbnte||lpad(a.nscmprbnte::TEXT,3,'0')||'-'||lpad(a.ncmprbnte::TEXT,8,'0') /*AS numeroCpe*/,
-			to_char(a.femsn ,'YYYY-MM-DD')/* AS fechaDeEmision*/,
+			a.tcmprbnte||LPAD(a.nscmprbnte::TEXT,3,'0')||'-'||LPAD(a.ncmprbnte::TEXT,8,'0') /*AS numeroCpe*/,
+			TO_CHAR(a.femsn ,'YYYY-MM-DD')/* AS fechaDeEmision*/,
 			'PEN||||||||0101||}'
 		) AS cabeceraDelComprobante,
 		'20100375061|6|CLINICA SANTA ISABEL S.A.C.|CLINICA SANTA ISABEL S.A.C.|150130|AV. GUARDIA CIVIL 135|URB. CORPAC|LIMA|LIMA|SAN BORJA|PE||||0000}' AS datosDelEmisor,
-		concat_ws('|',
+		CONCAT_WS('|',
 			COALESCE(CASE WHEN a.ctdcmnto =7 THEN '99999999' END,COALESCE(a.ndidntdd, '99999999')) /*AS numeroDocumentoReceptor*/,
 			case a.ctdcmnto 
 				when 0 then '0'
@@ -121,33 +122,33 @@ SELECT
 		END||
 		CASE
 		WHEN COUNT(*)FILTER(WHERE c.caigv='A') > 0 THEN --TOTAL VALOR DE VENTA - GRAVADAS
-			SUM(c.vvnta)FILTER(WHERE c.caigv='A')::TEXT||'|'||round(sum(c.migv),2)||'|S|1000|IGV|VAT}'
+			SUM(c.vvnta)FILTER(WHERE c.caigv='A')::TEXT||'|'||ROUND(SUM(c.migv),2)||'|S|1000|IGV|VAT}'
 		ELSE
 			'|||||}'
 		END
 		||'|||||}~' AS impuestosTotalesPorOperacion,
-		concat_ws('|',max(a.vvnta),max(a.tcta),'','','',max(a.tcta),'',max(a.migv)||'}~')AS montosTotales,
+		CONCAT_WS('|',MAX(a.vvnta),MAX(a.tcta),'','','',MAX(a.tcta),'',MAX(a.migv)||'}~')AS montosTotales,
 		'||||}~'  AS descuentoGlobal,
 		'|||||}~' AS datosDelAnticipo,
 		'[D]~' AS detalles,
 		'|}~' AS leyendas,
 
-		concat_ws('|',
-			'|||417 4100|'||max(f.cacja),
-			max(f.ccja) /*AS caja*/,
-			to_char(a.femsn,'HH24:MI') /*AS hora*/,
-			COALESCE(c_codificacion_hexadecimal(max(d.aynttlr)),''),
-			COALESCE(c_codificacion_hexadecimal(max(d.deafldo)),''),
-			COALESCE(c_codificacion_hexadecimal(max(e.rsabrvda)),''),
-			max(trim(a.cucrgstro)),
+		CONCAT_WS('|',
+			'|||417 4100|'||MAX(f.cacja),
+			MAX(f.ccja) /*AS caja*/,
+			TO_CHAR(a.femsn,'HH24:MI') /*AS hora*/,
+			COALESCE(c_codificacion_hexadecimal(MAX(d.aynttlr)),''),
+			COALESCE(c_codificacion_hexadecimal(MAX(d.deafldo)),''),
+			COALESCE(c_codificacion_hexadecimal(MAX(e.rsabrvda)),''),
+			MAX(TRIM(a.cucrgstro)),
 			a.nprfctra /*AS prefactura*/,
 			a.cayccja  /*AS NroAperturaCaja*/,
 			a.crcmprbnte /*AS idComprobante*/,
 			COALESCE(CASE WHEN esTituloGratuito THEN 0.00 END,totalPago) /*total pago*/	,			  
-			trunc(vuelto,2),
+			TRUNC(vuelto,2),
 			a.imprdndo /*AS redondeo*/,
 			'||',
-			c_codificacion_hexadecimal(fpwcgnd02(max(b.cpcnte))),/*paciente*/
+			c_codificacion_hexadecimal(fpwcgnd02(MAX(b.cpcnte))),/*paciente*/
 			'',
 			COALESCE(CASE WHEN esTituloGratuito THEN GLOSA_TITULO_GRATUITO END,c_codificacion_hexadecimal(GLOSA_GENERAL))/*GLOSA*/,				  
 			a.pigv /*AS igv*/,
@@ -157,13 +158,13 @@ SELECT
 			'||}'
 		) AS adjuntos,
 		
-		concat_ws('|',
+		CONCAT_WS('|',
 			'',		  
 			f_nro_a_letras(COALESCE(CASE WHEN esTituloGratuito THEN 0.00 END,a.tcta))||' SOLES',
 			'',
-			coalesce(NOMBRE_IMPRESORA,''),
-			coalesce(CASE WHEN NOMBRE_IMPRESORA IS NOT NULL THEN '2' END,''),	  
-			COMANDO
+			COALESCE(NOMBRE_IMPRESORA,''),
+			COALESCE(CASE WHEN NOMBRE_IMPRESORA IS NOT NULL THEN '2' END,''),	  
+			COALESCE(COMANDO,'emitir_ticket')
 		) as impresion,	
 		'[MP]~|}~\' AS mediosDePago
 FROM pwtgn00 a
@@ -178,18 +179,18 @@ AND a.scpgo = 'N'
 AND a.nscmprbnte > 0
 AND c.vvnta > 0
 GROUP BY a.crcmprbnte
-)SELECT   concat(cabeceraDelComprobante,
-				  datosDelEmisor,
-				  datosDelReceptor,
-				  impuestosTotalesPorOperacion,
-				  montosTotales,
-				  descuentoGlobal,
-				  datosDelAnticipo,
-				  detalles,
-				  leyendas,
-				  adjuntos,
-				  impresion,
-				  mediosDePago)
+)SELECT   CONCAT(cabeceraDelComprobante,
+				 datosDelEmisor,
+				 datosDelReceptor,
+				 impuestosTotalesPorOperacion,
+				 montosTotales,
+				 descuentoGlobal,
+				 datosDelAnticipo,
+				 detalles,
+				 leyendas,
+				 adjuntos,
+				 impresion,
+				 mediosDePago)
 INTO cabeceraComprobante
 FROM cpeCabecera;
 
@@ -197,24 +198,24 @@ FROM cpeCabecera;
 
 WITH cpeDetalle AS (
 SELECT 
-		(row_number() OVER  (PARTITION BY ''))::TEXT ||'|'||
+		(ROW_NUMBER() OVER  (PARTITION BY ''))::TEXT ||'|'||
 		TRUNC(b.cntdd,2)::TEXT||'|'||
 		'NIU|'||
 		CASE 
 		WHEN b.caigv='T' OR c.tvnta='T' THEN b.pidscnto::TEXT||'|0.00|'||b.pidscnto::TEXT||'|02|'
-		WHEN b.caigv='I' THEN b.vvnta::TEXT||'|'||round(b.migv,2)::TEXT||'|'||round(b.vvnta/b.cntdd,2)::TEXT||'|01|'
-		WHEN b.caigv='A' THEN round(b.vvnta,2)||'|'||round(b.migv,2)||'|'||round((b.vvnta + b.migv)/b.cntdd,2)||'|01|'
+		WHEN b.caigv='I' THEN b.vvnta::TEXT||'|'||ROUND(b.migv,2)::TEXT||'|'||ROUND(b.vvnta/b.cntdd,2)::TEXT||'|01|'
+		WHEN b.caigv='A' THEN ROUND(b.vvnta,2)||'|'||ROUND(b.migv,2)||'|'||ROUND((b.vvnta + b.migv)/b.cntdd,2)||'|01|'
 		END||	
 		CASE
 		WHEN c.tvnta='I' AND b.csgro > 0 AND  d.id_tabla IS NULL THEN  
-			'false|00|'||ROUND(b.csgro/100,2)||'|'||round(b.pidscnto * b.csgro/100,2)||'|'||round(b.pudscnto *  b.cntdd, 2)||'|'
+			'false|00|'||ROUND(b.csgro/100,2)||'|'||ROUND(b.pidscnto * b.csgro/100,2)||'|'||ROUND(b.pudscnto *  b.cntdd, 2)||'|'
 		ELSE 
 			'|||||'
 		END||
 		CASE 
 		WHEN b.caigv='T' OR c.tvnta='T' THEN b.pidscnto::TEXT||'|'||'0.00|Z|0.00|21|9996|GRA|FRE|'
-		WHEN b.caigv='I' THEN b.vvnta::TEXT||'|'||round(b.migv,2)||'|O|0.00|30|9998|INA|FRE|'
-		WHEN b.caigv='A' THEN b.vvnta::TEXT||'|'||round(b.migv,2)||'|S|18.00|10|1000|IGV|VAT|'
+		WHEN b.caigv='I' THEN b.vvnta::TEXT||'|'||ROUND(b.migv,2)||'|O|0.00|30|9998|INA|FRE|'
+		WHEN b.caigv='A' THEN b.vvnta::TEXT||'|'||ROUND(b.migv,2)||'|S|18.00|10|1000|IGV|VAT|'
 		END||
 		'|||||||||||||||'||
 		c_codificacion_hexadecimal(fpwcpcd03(b.tdcmprbnte, b.cprcdmnto))||'|'||
@@ -229,7 +230,7 @@ SELECT
 			END
 		 END ||'|'|| --DESCRIPCIÓN ADICIONAL
 		LPAD(b.TDCMPRBNTE::TEXT,2,'0')||b.CPRCDMNTO::TEXT||'|'||
-		coalesce(uf_codigo_sunat(b.tdcmprbnte,b.cprcdmnto,a.nprfctra),'')||'|'||
+		COALESCE(uf_codigo_sunat(b.tdcmprbnte,b.cprcdmnto,a.nprfctra),'')||'|'||
 		'|'||
 		CASE 
 		WHEN c.tvnta='T' OR b.caigv='T' THEN '0.00|'		
@@ -243,11 +244,11 @@ FROM pwtgn00 a
 JOIN pwtgn01 b ON (a.crcmprbnte=b.crcmprbnte)
 JOIN pwccp00 c ON (a.clcl=c.clcl AND a.cemprsa=c.cemprsa AND a.nprfctra=c.nprfctra)
 LEFT JOIN tabla_maestra d on(d.id_tabla in(6,10) /*COPAGOS FIJOS*/
-AND b.cprcdmnto  = cast(d.id_texto as numeric) 
+AND b.cprcdmnto  = d.id_texto::NUMERIC
 AND b.tdcmprbnte = 1    /*SERVICIOS*/ )  	  
 WHERE a.crcmprbnte=an_crcmprbnte
 AND b.vvnta > 0
-)SELECT string_agg(cpeDetalle.tramaDetalle, '' ORDER BY 1)
+)SELECT STRING_AGG(cpeDetalle.tramaDetalle, '' ORDER BY 1)
 INTO detalleComprobante
 FROM cpeDetalle;
 
@@ -255,6 +256,6 @@ trama := REPLACE(cabeceraComprobante,'[D]', detalleComprobante);
 trama := REPLACE(trama,'[MP]', COALESCE(CASE WHEN esTituloGratuito THEN '|}' END,mediosDePagos));
 
 RETURN trama;
-
 END;
-$function$;
+$function$
+;
