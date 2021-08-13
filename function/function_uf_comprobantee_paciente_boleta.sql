@@ -84,7 +84,7 @@ WHERE nprfctra = prefactura;
 WITH cpeCabecera AS (
 SELECT 
 		CONCAT_WS('|',
-			'docid='||a.tcmprbnte||LPAD(a.nscmprbnte::TEXT,3,'0')||'-'||LPAD(a.ncmprbnte::TEXT,8,'0')||'&comando='||COMANDO||'&parametros=&datos='||
+			'docid='||a.tcmprbnte||LPAD(a.nscmprbnte::TEXT,3,'0')||'-'||LPAD(a.ncmprbnte::TEXT,8,'0')||'&comando='||REPLACE(COMANDO,'}~','')||'&parametros=&datos='||
 			'03'/*AS tipoDocumento*/,
 			a.tcmprbnte||LPAD(a.nscmprbnte::TEXT,3,'0')||'-'||LPAD(a.ncmprbnte::TEXT,8,'0') /*AS numeroCpe*/,
 			TO_CHAR(a.femsn ,'YYYY-MM-DD')/* AS fechaDeEmision*/,
