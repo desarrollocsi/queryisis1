@@ -45,7 +45,7 @@ WITH impresora AS (
 	WHERE  c.cusga = usuario
 	AND b.ccja = caja
 )SELECT RUTA_SERVIDOR_IMPRESION||nombreDeImpresora,
-		 COALESCE(CASE WHEN esMarketing THEN 'emitir_isis2' END,'emitir_ticket')
+		 COALESCE(CASE WHEN esMarketing THEN 'emitir_isis2}~' END,'emitir_ticket}~')
 INTO NOMBRE_IMPRESORA,COMANDO
 FROM impresora;
 
@@ -164,7 +164,7 @@ SELECT
 			'',
 			COALESCE(NOMBRE_IMPRESORA,''),
 			COALESCE(CASE WHEN NOMBRE_IMPRESORA IS NOT NULL THEN '2' END,''),	  
-			COALESCE(COMANDO,'emitir_ticket')
+			COALESCE(COMANDO,'emitir_ticket}~')
 		) as impresion,	
 		'[MP]~|}~\' AS mediosDePago
 FROM pwtgn00 a
