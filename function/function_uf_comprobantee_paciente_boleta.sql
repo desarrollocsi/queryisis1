@@ -139,7 +139,7 @@ SELECT
 			TO_CHAR(a.femsn,'HH24:MI') /*AS hora*/,
 			COALESCE(c_codificacion_hexadecimal(MAX(d.aynttlr)),''),
 			COALESCE(c_codificacion_hexadecimal(MAX(d.deafldo)),''),
-			COALESCE(c_codificacion_hexadecimal(MAX(e.rsabrvda)),''),
+			COALESCE(CASE WHEN esTituloGratuito THEN '' END,COALESCE(c_codificacion_hexadecimal(MAX(e.rsabrvda)),'')),
 			MAX(TRIM(a.cucrgstro)),
 			a.nprfctra /*AS prefactura*/,
 			a.cayccja  /*AS NroAperturaCaja*/,
