@@ -163,7 +163,7 @@ SELECT
 			f_nro_a_letras(COALESCE(CASE WHEN esTituloGratuito THEN 0.00 END,a.tcta))||' SOLES',
 			'',
 			COALESCE(NOMBRE_IMPRESORA,''),
-			COALESCE(CASE WHEN NOMBRE_IMPRESORA IS NOT NULL THEN '2' END,''),	  
+			COALESCE(CASE WHEN esTituloGratuito THEN '1' END,COALESCE(CASE WHEN NOMBRE_IMPRESORA IS NOT NULL THEN '2' END,'')),
 			COALESCE(COMANDO,'emitir_ticket}~')
 		) as impresion,	
 		'[MP]~|}~\' AS mediosDePago
