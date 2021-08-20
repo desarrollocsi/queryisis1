@@ -12,8 +12,8 @@ WITH generaNumeroDeLote AS (
 			cesgrs::TEXT ~ '30' AS esNoConsiderado,
 			cesgrs AS codigoDeIafa,
 			(COALESCE(CASE WHEN lote = 0 THEN 0 END,
-					COALESCE(CASE WHEN substr(lote::TEXT,2) LIKE '' THEN lote::TEXT END, 
-					substr(lote::TEXT,2))::INT) + 1)::TEXT AS numeroCorrelativo
+			 COALESCE(CASE WHEN substr(lote::TEXT,strpos(lote::TEXT,'0')) LIKE '' THEN lote::TEXT END, 
+			 substr(lote::TEXT,strpos(lote::TEXT,'0')))::INT) + 1)::TEXT AS numeroCorrelativo
 	FROM pwccp04
 	WHERE cesgrs=codigoDeIafa
 	ORDER BY fcrgstro DESC LIMIT 1
